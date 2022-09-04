@@ -1,0 +1,450 @@
+---
+title: "Vitamin D Receptor Primary Target Genes"
+output: html_notebook
+---
+
+
+```{r}
+library(TwoSampleMR)
+library(MRInstruments)
+data("gtex_eqtl")
+data("gwas_catalog")
+ao <- available_outcomes()
+VDR_MR_Results_Brain <- data.frame()
+```
+
+```{r}
+VDR_Primary_Target_Genes <- read.csv("Table 1 VDR Primary Target Genes.csv")
+VDR_genes <- c(VDR_Primary_Target_Genes$Gene)
+
+print(VDR_genes)
+VDR_genes1 <- c("ACVRL1","ARHGEF16","CAMP","CD14","CD274","CD300LF","CFLAR","CTSZ" )
+VDR_genes2 <- c("DENND6B","DNASE2","FBP1","G0S2", "GADD45B","GLIPR1", "GM2A",  "ICAM1" ,"IGFBP7", "INSR" ,"ITSN1")
+VDR_genes3 <-c("LAMB3", "LCP2",  "LRG1",  "LRRC25", "NCOA4", "NFE2",  "NFKBIA", "NRIP1",  "OCEL1", "PDE4DIP",   "PDLIM4" )
+VDR_genes4 <-c("PPARGC1B","PRKCH","RAB37","RASSF2", "RHOBTB3","RPRD2",  "SEMA6B","SLC37A2","SLC7A2","SMIM3", "SMPDL3A" )
+VDR_genes5 <-c("SP100", "SSH1"  ,"ST3GAL1", "SYK", "TESPA1", "TMCO6" , "TMEM215","TMEM37" ,"TREM1" )
+VDR_genes6 <-c("TRIM38" ,"VAV1" , "WDR55" ,"CD1D"   ,"DUSP10", "FAM43A" ,"FRAT1"  ,"KCTD12","LGALS9","LILRB4" )  
+VDR_genes7 <-c("LRRC8A" ,"LTB4R","NAPSB"  ,"NCF4" , "PEX5L" , "PRICKLE1","RAB3D","ROBO4","SDS","SHE"  ,"SRA1" ) 
+VDR_genes8 <-c("TMEM86A","TRAF3IP3","XKR8", "ZNF589", "ABCB4", "ACVR1B" ,"AIG1","APCDD1","ASAP2","B3GNT8"   )
+VDR_genes9 <-c("BCL6"  ,"CCR1",  "CCRL2","CENPV",  "CHST3",  "CRYZL1", "CYTH4", "DPF3", "ELL2",  "FANCE" )
+VDR_genes10<-c("FGD3" ,"GPT2", "GRK5" , "HTT" , "IRS1", "ITGAM", "JAG1" ,"KCNF1","KIAA1324", "MAPK13","MS4A7" )  
+VDR_genes11<-c("NMNAT2","NMUR1" , "NPTX1", "NT5DC3",  "PDGFRL", "PDZD7", "PFKFB4", "PKD2" ) 
+VDR_genes12<-c("RAB11FIP1","RAB20","SCARB1","SERINC2","TFE3","THEMIS2","TRAF5","TUBB4A" ,"USP2" ,"VPS37B" )
+VDR_genes13<-c("ZDHHC18", "ZFP36","ADAMTS10", "CDON", "CLMN","CRISPLD2","DNAH10","ENTPD7", "FUCA1" ,"FXYD6" )
+VDR_genes14<-c("GJD3","HBEGF","IRF5","ITGB5","LFNG","LRP12","LTC4S", "MARCKS","NINJ1"  ,"NRCAM" )
+VDR_genes15<-c("PDCD1LG2" ,"PKP2" ,"SEL1L3" ,"SPRY4", "SYT3","TBC1D2","ADAM28","ARL5C","BTNL9","CXCL10","CYP19A1"  )
+VDR_genes16<-c("FBXO41","FOXF1" ,"GABRG2" ,"IL7R" ,"LRRC3B","NCF1","NCF1B", "NCF1C", "NR1I2","ORM1" ,"OTOF" )
+VDR_genes17<-c("PNOC" ,"PPP1R27","PTAFR","RHOH", "SFXN3", "SLC35A4", "SRRM3","TSPAN18","TTC39A")  
+
+#Genes removed from the lists for crashing the loop: "ACSL1","ABCD2","ARHGEF2","STEAP3","TMEM156","ZNF44","THBD","CD93","NOD2","PLEKHO1","PDGFA", "WLS","CYP26B1","GMPR","STS","TRAK1","SEMA4D","TDRD10",
+```
+
+```{r}
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes1, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes1 <- unique(gtex_eqtl_genes_dt$gene_name)
+for (g in VDR_genes1) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes2, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes2 <- unique(gtex_eqtl_genes_dt$gene_name)
+for (g in VDR_genes2) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+```
+```{r}
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes3, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes3 <- unique(gtex_eqtl_genes_dt$gene_name)
+for (g in VDR_genes3) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes4, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes4 <- unique(gtex_eqtl_genes_dt$gene_name)
+for (g in VDR_genes4) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+```
+
+```{r}
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes5, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes5 <- unique(gtex_eqtl_genes_dt$gene_name)
+for (g in VDR_genes5) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes6, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes6 <- unique(gtex_eqtl_genes_dt$gene_name)
+for (g in VDR_genes6) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+```
+
+```{r}
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes7, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes7 <- unique(gtex_eqtl_genes_dt$gene_name)
+
+for (g in VDR_genes7) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes8, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes8 <- unique(gtex_eqtl_genes_dt$gene_name)
+
+for (g in VDR_genes8) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+```
+
+```{r}
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes9, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes9 <- unique(gtex_eqtl_genes_dt$gene_name)
+
+for (g in VDR_genes9) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes10, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes10 <- unique(gtex_eqtl_genes_dt$gene_name)
+
+for (g in VDR_genes10) 
+{
+ exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+```
+
+```{r}
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes11, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes11 <- unique(gtex_eqtl_genes_dt$gene_name)
+
+for (g in VDR_genes11) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes12, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes12 <- unique(gtex_eqtl_genes_dt$gene_name)
+
+for (g in VDR_genes12) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+```
+
+```{r}
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes13, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes13 <- unique(gtex_eqtl_genes_dt$gene_name)
+
+for (g in VDR_genes13) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes14, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes14 <- unique(gtex_eqtl_genes_dt$gene_name)
+
+for (g in VDR_genes14) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+```
+
+```{r}
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes15, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes15 <- unique(gtex_eqtl_genes_dt$gene_name)
+
+for (g in VDR_genes15) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes16, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes16 <- unique(gtex_eqtl_genes_dt$gene_name)
+
+for (g in VDR_genes16) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+```
+
+```{r}
+gtex_eqtl_genes_dt = gtex_eqtl[gtex_eqtl$gene_name %in% VDR_genes17, ]
+#Make sure only appropriate tissue expression data is used
+unique(gtex_eqtl_genes_dt$tissue)
+include_tissue_list = c(
+  "Brain Anterior cingulate cortex BA24","Brain Caudate basal ganglia","Brain Cerebellar Hemisphere","Brain Cerebellum",
+  "Brain Hippocampus","Brain Hypothalamus","Brain Nucleus accumbens basal ganglia","Brain Putamen basal ganglia",
+  "Brain Cortex","Brain Frontal Cortex BA9" ,"Pituitary" 
+)
+gtex_eqtl_genes_dt = gtex_eqtl_genes_dt[gtex_eqtl_genes_dt$tissue %in%include_tissue_list, ]
+VDR_genes17 <- unique(gtex_eqtl_genes_dt$gene_name)
+for (g in VDR_genes17) 
+{
+  exp_dat <-format_gtex_eqtl(gtex_eqtl_genes_dt[grep(g,gtex_eqtl_genes_dt$gene_name), ])
+
+  exp_dat <- clump_data(exp_dat)
+  outcome_dat <- extract_outcome_data(exp_dat$SNP, c('ieu-b-2'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+  H_dat <- harmonise_data(exp_dat, outcome_dat, action = 2)
+  mr_results_MRbase <- mr(H_dat, method_list = "mr_wald_ratio", "mr_ivw")
+  VDR_MR_Results_Brain<- rbind.data.frame(VDR_MR_Results_Brain,mr_results_MRbase)
+  print(mr_results_MRbase)
+}
+
+```
+
+```{r}
+VDR_MR_Results_Brain_p_adjusted <- VDR_MR_Results_Brain
+
+
+VDR_MR_Results_Brain_p_adjusted$p.adjusted <-c(p.adjust(VDR_MR_Results_Brain$pval, method = "BH"))
+VDR_MR_Results_Brain_p_adjusted
+```
