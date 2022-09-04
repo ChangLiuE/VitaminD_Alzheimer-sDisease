@@ -1,0 +1,254 @@
+---
+title: "Screening Vitamins Effects on Alzheimer's Disease"
+author: "Chang Liu"
+date: '2022-08-17'
+output:
+  pdf_document: default
+  html_document: default
+---
+Mendelian Randomisation study of vitamins'(level, and intake) effect on
+Alzheimer's disease risk
+
+Outcome data: Alzheimer's diease, chose ieu-b-2 and ebi-a-GCST002245 as
+the two data set to use ieu-b-2, number of cases: 21982 , number of
+controls: 41944 ebi-a-GCST002245, number of cases:17008 , number of
+controls: 37154
+
+MR base and Phenoscanner are used to identify exposure data. For
+exposure data, all relevant MR base data set are initially chosen as the
+input. Where significant results are shown, the strength of the GWAS was
+reviewed. All GWAS with number of cases less than 5000 was discarded. MR
+base GWAS catalog is searched first, only when not enough SNPs can be
+identified for a good analysis Phenoscanner will be searched. MR base is
+accessed through: <http://app.mrbase.org/> A good number of single
+nucleotide polymorphism(SNP) is defined as having 5 or more SNP
+identified in the MR results. Only then the results will be used
+European population is used as the default population of reference, all
+the non-European population sample were removed by clump_data
+
+```{r Library}
+#Required R package
+library(TwoSampleMR)
+library(MRInstruments)
+data(gwas_catalog)
+ao <- available_outcomes()
+data(gtex_eqtl)
+```
+
+Vitamin A
+
+```{r Vitamin A}
+#Vitamin A was searched in MR base as an exposure, only vitamin A supplement data was available
+#Vitamin A Supplement MR base data set
+VitASup_exposure_data <- extract_instruments(c('ukb-a-458','ukb-b-9596'))
+VitASup_exposure_data <- clump_data(VitASup_exposure_data)
+VitASup_outcome_data <- extract_outcome_data(VitASup_exposure_data$SNP, c('ieu-b-2','ebi-a-GCST002245'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+VitaASup_H_data <- harmonise_data(VitASup_exposure_data, VitASup_outcome_data, action = 2)
+VitASup_mr_results <- mr(VitaASup_H_data)
+VitASup_mr_results
+#Only 1 SNP was available in Vitamin A supplement dataset
+#Vitamin A was searched on PhenoScanner, at p value 1e-5, no data was available
+#ukb-a-458, number of cases: 6173, number of controls:	329418	
+#ukb-b-9596, number of cases: 8863, number of controls: 451488	
+```
+Vitamin B
+
+```{r}
+#Vitamin B was searched in MR base, vitamin B supplement, vitamin B12 level and vitamin B level was available
+
+#Vitamin B supplement MR Base Data
+VitaminBSup_exposure <- extract_instruments(c('ukb-b-10188','ukb-a-460','ukb-b-2669'),p1 = 1e-5)
+VitaminBSup_exposure <- clump_data(VitaminBSup_exposure)
+#Alzheimer's disease outcome data 
+VitaminBSup_outcome_dat <- extract_outcome_data(VitaminBSup_exposure$SNP, c('ieu-b-2','ebi-a-GCST002245'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+VitBSup_H_data <- harmonise_data(VitaminBSup_exposure,VitaminBSup_outcome_dat, action =2)
+
+#MR testing
+VitBSup_mr_results <- mr(VitBSup_H_data)
+VitBSup_mr_results
+VitBSup_Odds_Ratio<-generate_odds_ratios(VitBSup_mr_results)
+VitBSup_Odds_Ratio
+mr_pleiotropy_test(VitBSup_H_data)
+mr_heterogeneity(VitBSup_H_data, method_list = c("mr_egger_regression", "mr_ivw"))
+VitD_LeaveOut_Results <- mr_leaveoneout(VitBSup_H_data)
+#No MR results reached the 0.05 p value threshold 
+#ukb-b-10188, number of cases:19395, number of controls:440956
+#ukb-a-460, number of cases:13498, number of controls:322093
+#ukb-b-2669, number of cases:3328, number of controls:459605
+
+#Vitamin B12 level MR Base Data-Not Enough SNPs
+VitaminB12Lvl_exposure <- extract_instruments(c('ukb-b-19524','ukb-e-100013_CSA'))
+
+#Vitamin B6 Level MR Base Data- Not Enough SNPs
+VitaminB6Lvl_exposure <- extract_instruments(c('ukb-b-7864','ukb-e-100012_CSA','ukb-e-100012_AFR'))
+VitaminB6Lvl_exposure <- clump_data(VitaminB6Lvl_exposure)
+
+#Vitamin B was searched in Phenoscanner with p value threshold 1E-5, only vitamin B12 level data was available 
+#Accessed through http://www.phenoscanner.medschl.cam.ac.uk/?query=Vitamin+B&catalogue=All&p=1e-5&proxies=None&r2=0.8&build=37
+
+# Vitamin B12 Exposure Data PhenoScanner
+setwd("C:/Users/chang/OneDrive/Documents/Phenotypes")
+vit_b12_data <- read_exposure_data(
+  filename = "Vitamin_B_PhenoScanner_GWAS.csv",
+  sep = ",",
+  snp_col = "rsid",
+  beta_col = "beta",
+  se_col = "se",
+  effect_allele_col = "a1",
+  other_allele_col = "a2",
+  eaf_col = "afr",
+  pval_col = "p",
+  units_col = "Units",
+  gene_col = "Gene",
+  samplesize_col = "n"
+)
+
+exposure_data_vit_B12<-clump_data(vit_b12_data, clump_r2 = 0.001)
+
+#Alzheimer's Disease Outcome
+B12_outcome_dat <- extract_outcome_data(exposure_data_vit_B12$SNP, c('ieu-b-2','ebi-a-GCST002245'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+
+#Data Harmonisation
+VitaminB12_H_data <- harmonise_data(exposure_data_vit_B12, B12_outcome_dat, action = 2)
+
+#MR Testing
+mr_results_VitB12<-mr(VitaminB12_H_data)
+mr_results_VitB12
+generate_odds_ratios(mr_results_VitB12)
+mr_pleiotropy_test(VitaminB12_H_data)
+mr_heterogeneity(VitaminB12_H_data, method_list=c("mr_egger_regression", "mr_ivw"))
+
+#Results visualisation
+plot1 <- mr_scatter_plot(mr_results_VitB12, VitaminB12_H_data)
+plot1
+res_single <- mr_singlesnp(VitaminB12_H_data)
+p2 <- mr_forest_plot(res_single)
+p2[[1]]
+
+#Only 3 SNPs was identified, not enough for a good analysis# 
+```
+
+Vitamin C
+
+```{r Vitamin C}
+#Vitamin C was searched in MR base, vitamin C supplement, and vitamin C was available
+#Vitamin C supplement 
+#'ukb-b-12466','ukb-b-15175','ukb-b-4690','ukb-a-461','ukb-b-488' was identified.
+#ukb-b-12466, number of cases: 1222	, number of controls: 461711
+#ukb-b-15175, number of cases: 39880 , number of controls: 420471	
+#ukb-b-4690, number of cases:4171, number of controls: 60778
+#ukb-a-461, number of cases:28536, number of controls: 307055	
+#ukb-b-488, number of cases:5778, number of controls: 457155	
+#ukb-a-461, ukb-b-488 are retained
+VitaminCSup_exposure <- extract_instruments(c('ukb-a-461','ukb-b-488'),p1 = 1e-5)
+VitaminCSup_exposure <- clump_data(VitaminCSup_exposure)
+#Alzheimer's Disease Outcome
+VitaminCSup_outcome_data <- extract_outcome_data(VitaminCSup_exposure$SNP, c('ieu-b-2','ebi-a-GCST002245'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+#Data harmonisation
+VitCSup_H_data <- harmonise_data(VitaminCSup_exposure,VitaminCSup_outcome_data, action =2)
+#MR testing
+VitCSup_mr_results <- mr(VitCSup_H_data)
+VitCSup_mr_results
+VitCSup_Odds_Ratio<-generate_odds_ratios(VitCSup_mr_results)
+VitCSup_Odds_Ratio
+VitCSup_pleiotropy <-mr_pleiotropy_test(VitCSup_H_data)
+VitCSup_pleiotropy
+VitCSup_heterogeneity <-mr_heterogeneity(VitCSup_H_data, method_list = c("mr_egger_regression", "mr_ivw"))
+VitCSup_heterogeneity
+VitCSup_LeaveOut_Results <- mr_leaveoneout(VitCSup_H_data)
+VitCSup_LeaveOut_Results
+#Results Visualization#
+#Scatter All methods plot#
+VitCSup_plot1 <- mr_scatter_plot(VitCSup_mr_results, VitCSup_H_data)
+VitCSup_plot1
+#Forest plot#
+singleVitCSup <- mr_singlesnp(VitCSup_H_data)
+VitCSup_plot2<-mr_forest_plot(singleVitCSup)
+VitCSup_plot2[[1]]
+#Leave One Out plot#
+res_VitCSup <- mr_leaveoneout(VitCSup_H_data)
+VitCSup_plot3 <- mr_leaveoneout_plot(res_VitCSup)
+VitCSup_plot3[[1]]
+
+#Vitamin C MR Base
+#'ukb-e-100015_CSA','ukb-b-19390','met-a-348','ukb-e-100015_AFR' were identified for vitamin C levels
+#ukb-e-100015_CSA, number of cases:1469  number of controls:0
+#ukb-b-19390, number of cases: NA number of controls:NA, sample size: 64979	
+#met-a-348, number of cases: NA number of controls: NA, sample size:2085
+#ukb-e-100015_AFR, number of cases:1209	  number of controls:0
+#None fit the inclusion criteria, all dropped. 
+
+#Searched Vitamin C in Phenoscanner at the threshold p value: 1E-5, no data was available. 
+
+```
+Vitamin D
+
+```{r}
+#Vitamin D
+# Vitamin D level Exposure Data MR bas
+VitD_exposure_data <- extract_instruments(c('ebi-a-GCST90000615'))
+VitD_exposure_data <- clump_data(VitD_exposure_data)
+VitD_exposure_dat<-VitD_exposure_data[VitD_exposure_data$pval.exposure<5*10^-80,]
+#Alzheimer's Disease Outcome Data#
+VitD_outcome_dat <- extract_outcome_data(VitD_exposure_dat$SNP, c('ieu-b-2','ebi-a-GCST002245'), proxies = 1, rsq = 0.8, align_alleles = 1, palindromes = 1, maf_threshold = 0.3)
+
+#Data Harmonisation#
+VitD_H_data <- harmonise_data(VitD_exposure_data, VitD_outcome_dat, action = 2)
+
+#MR testing#
+mr_results_VitD <- mr(VitD_H_data)
+mr_results_VitD
+VitD_Odds_Ratio<-generate_odds_ratios(mr_results_VitD)
+VitD_Odds_Ratio
+mr_pleiotropy_test(VitD_H_data)
+mr_heterogeneity(VitD_H_data, method_list = c("mr_egger_regression", "mr_ivw"))
+VitD_LeaveOut_Results <- mr_leaveoneout(VitD_H_data)
+
+#Results Visualization#
+#Scatter All methods plot#
+plot_VitD <- mr_scatter_plot(mr_results_VitD, VitD_H_data)
+plot_VitD
+#Forest plot#
+singleVitD <- mr_singlesnp(VitD_H_data)
+VitDp2<-mr_forest_plot(singleVitD)
+VitDp2[[1]]
+#Leave One Out plot#
+res_VitD <- mr_leaveoneout(VitD_H_data)
+VitDp3 <- mr_leaveoneout_plot(res_VitD)
+VitDp3[[1]]
+
+#Vitamin D exposure used 5*10^-80 as the P value threshold, because at a higher p value too many SNPs are identified
+#ebi-a-GCST90000615, number of cases: N/A, number of controls: N/A, sample size: 417580
+
+```
+
+Vitamin E
+
+```{r Vitamin E}
+#Vitamin E
+#Vitamin E Supplement MR base dataset#
+VitESup_exposure_data <- extract_instruments(c('ukb-a-463','ukb-b-14518','ukb-b-12506','ukb-b-16288'))
+#No available SNPs# 
+#ukb-a-463, number of cases:9479 , number of controls:326112
+#ukb-b-14518, number of cases:1257 , number of controls:63692	
+#ukb-b-12506, number of cases:13548	 , number of controls:446803	
+#ukb-b-16288, number of cases:1741 , number of controls:461192
+
+#Vitamin E level MR base dataset# 
+VitE_exposure_data <- extract_instruments(c('ukb-e-100025_AFR','ukb-e-100025_CSA','ukb-b-6888'))
+#No available SNPs#
+#ukb-e-100025_AFR, number of cases:1209	 , number of controls:0
+#ukb-e-100025_CSA, number of cases:1469	 , number of controls:0
+#ukb-b-6888, number of cases:NA , number of controls:NA, sample size:64979
+
+#Vitamin E was searched in Phenoscanner, at p value threshold 1E-5, only 3 SNPs was identified. Not enough for a good analysis.
+
+```
+
+Vitamin K
+
+```{r Vitamin K}
+#Vitamin K 
+#MR base GWAS catalog was searched, no vitamin K GWAS data set was found
+#Vitamin K was searched in Phenoscanner, at p value threshold 1E-5, no data was available
+```
