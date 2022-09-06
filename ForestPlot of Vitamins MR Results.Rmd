@@ -1,0 +1,37 @@
+---
+title: "Forest Plots for Vitamins MR Results"
+author: "Chang Liu"
+date: '2022-09-06'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(ggplot2)
+
+vitamin_mr_results_ad <- read.csv("Vitamin_MR_Results.csv")
+head(vitamin_mr_results_ad)
+
+#Generate forest plot for ieu-b-2
+ggplot(data=vitamin_mr_results_ad, aes(y=index, x=or, xmin=lower_ci, xmax=upper_ci)) +
+  geom_point() + 
+  geom_errorbarh(height=.1) +
+  scale_y_continuous(breaks=1:nrow(vitamin_mr_results_ad), labels=vitamin_mr_results_ad$Exposure) +
+  labs(title="Odds Ratio of Vitamins' effect on Alzheimer's Disease(ieu-b-2)", x='Odds Ratio', y = 'Vitamins') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic()
+
+#Generate forest plot for ebi-a-GCST002245
+vitamin_mr_results_late <- read.csv("MR_Vitamins_Result_Late_Onset.csv")
+head(vitamin_mr_results_late)
+
+ggplot(data=vitamin_mr_results_late, aes(y=index, x=or, xmin=lower_ci, xmax=upper_ci)) +
+  geom_point() + 
+  geom_errorbarh(height=.1) +
+  scale_y_continuous(name = "", breaks=1:nrow(vitamin_mr_results_late), labels=vitamin_mr_results_late$Exposure)+
+  labs(title="Odds Ratio of Vitamins' effect on Alzheimer's Disease(ebi-a-GCST002245)", x='Odds Ratio', y = 'Vitamins') +
+  geom_vline(xintercept=1, color='black', linetype='dashed', alpha=.5) +
+  theme_classic()
+
+```
