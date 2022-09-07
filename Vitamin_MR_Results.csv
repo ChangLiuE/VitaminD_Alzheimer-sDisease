@@ -1,0 +1,5 @@
+Exposure,Exposure ID,Outcome,Outcome ID,Method,Number of SNPs,Beta,se,p-value,upper_ci,lower_ci,or,index
+Vitamin B supplement,uk-b-10188,Alzheimer’s Disease,ieu-b-2,Inverse variance weighted,21,-1.60042954,1.80336,0.3748253,1.0553797,0.6978507,0.2018098,1
+Vitamin B12 serum level,PhenoScanner,Alzheimer’s Disease,ieu-b-2,Inverse variance weighted,3,-0.1529248,0.10552313,0.14728001,"0.05390056	","-0.3597501	","0.8581943	",2
+Vitamin C supplement,uk-a-461,Alzheimer’s Disease,ieu-b-2,Inverse variance weighted,25,0.150553996,1.252182,0.9042983,1.35E+01,"9.988636E-02	",1.162478,3
+Vitamin D3 serum level,ebi-a-GCST90000615,Alzheimer’s Disease,ieu-b-2,Inverse variance weighted,5,-0.1522827,0.07640033,0.046237355,0.9974652,"0.7393179	","0.8587455	",4

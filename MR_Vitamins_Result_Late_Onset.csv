@@ -1,0 +1,5 @@
+Exposure,Exposure ID,Outcome,Outcome ID,Method,Number of SNPs,Beta,se,p-value,upper_ci,lower_ci,or,index
+Vitamin B12 serum level,PhenoScanner,Alzheimer’s Disease (Late Onset),ebi-a-GCST002245,Inverse variance weighted,3,-0.1111386,0.1364986,0.41552437,1.1692923,0.6847675,"0.8948147	",1
+Vitamin C supplement,uk-a-461,Alzheimer’s Disease (Late Onset),ebi-a-GCST002245,Inverse variance weighted,23,-1.174787331,1.252398,0.34822868,3.596324,2.65E-02,0.3088847,2
+Vitamin B supplement,uk-b-10188,Alzheimer’s Disease (Late Onset),ebi-a-GCST002245,Inverse variance weighted,19,-1.25336,2.116766,0.553775,1.81E+01,"4.506537E-03	",0.285542,3
+Vitamin D3 serum level,ebi-a-GCST90000615,Alzheimer’s Disease (Late Onset),ebi-a-GCST002245,Inverse variance weighted,5,-0.1918594,0.07058376,0.006564218,0.9478916,0.7187774,0.825423,4
